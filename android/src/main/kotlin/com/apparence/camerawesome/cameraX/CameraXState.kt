@@ -1,5 +1,6 @@
 package com.apparence.camerawesome.cameraX
 
+import android.media.mediaRecorder
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.hardware.camera2.CameraCharacteristics
@@ -269,8 +270,55 @@ data class CameraXState(
         }
     }
 
-    private fun buildVideoCapture(videoOptions: AndroidVideoOptions?): VideoCapture<Recorder> {
-        val recorderBuilder = Recorder.Builder()
+    // private fun buildVideoCapture(videoOptions: AndroidVideoOptions?): VideoCapture<Recorder> {
+    //     val recorderBuilder = Recorder.Builder()
+    //     // Aspect ratio is handled by the setViewPort on the UseCaseGroup
+    //     if (videoRecordingQuality != null) {
+    //         val quality = when (videoRecordingQuality) {
+    //             VideoRecordingQuality.LOWEST -> Quality.LOWEST
+    //             VideoRecordingQuality.SD -> Quality.SD
+    //             VideoRecordingQuality.HD -> Quality.HD
+    //             VideoRecordingQuality.FHD -> Quality.FHD
+    //             VideoRecordingQuality.UHD -> Quality.UHD
+    //             else -> Quality.HIGHEST
+    //         }
+    //         recorderBuilder.setQualitySelector(
+    //             QualitySelector.from(
+    //                 quality,
+    //                 if (videoOptions?.fallbackStrategy == QualityFallbackStrategy.LOWER) FallbackStrategy.lowerQualityOrHigherThan(
+    //                     quality
+    //                 )
+    //                 else FallbackStrategy.higherQualityOrLowerThan(quality)
+    //             )
+    //         )
+    //     }
+    //     if (videoOptions?.bitrate != null) {
+    //         recorderBuilder.setTargetVideoEncodingBitRate(videoOptions.bitrate.toInt())
+    //     }
+    //     val recorder = recorderBuilder.build()
+    //     return VideoCapture.Builder<Recorder>(recorder)
+    //         .setMirrorMode(if (mirrorFrontCamera) MirrorMode.MIRROR_MODE_ON_FRONT_ONLY else MirrorMode.MIRROR_MODE_OFF)
+    //         .build()
+    // }
+
+    private fun buildVideoCapture(videoOptions: AndroidVideoOptions?): VideoCapture<MediaRecorder> {
+       // val recorderBuilder = Recorder.Builder()
+
+
+        val recorder = MediaRecorder()
+        recorder.setVideoSource(MediaRecorder.VideoSource.SURFACE)
+        recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+        // Custom encoding parameters
+        recorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264)
+        recorder.setVideoEncodingBitRate(3000000) // Bitrate
+        recorder.setVideoFrameRate(30) // Frame rate
+        recorder.setVideoSize(960, 720) // Resolution
+        recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+        recorder.setAudioEncodingBitRate(128000) // Audio bitrate
+        recorder.setAudioSamplingRate(44100)
+        recorder.setOutputFile(videoFile?.absolutePath)
+        recorder.prepare()
+
         // Aspect ratio is handled by the setViewPort on the UseCaseGroup
         if (videoRecordingQuality != null) {
             val quality = when (videoRecordingQuality) {
@@ -281,7 +329,7 @@ data class CameraXState(
                 VideoRecordingQuality.UHD -> Quality.UHD
                 else -> Quality.HIGHEST
             }
-            recorderBuilder.setQualitySelector(
+            recorder.setQualitySelector(
                 QualitySelector.from(
                     quality,
                     if (videoOptions?.fallbackStrategy == QualityFallbackStrategy.LOWER) FallbackStrategy.lowerQualityOrHigherThan(
@@ -292,10 +340,10 @@ data class CameraXState(
             )
         }
         if (videoOptions?.bitrate != null) {
-            recorderBuilder.setTargetVideoEncodingBitRate(videoOptions.bitrate.toInt())
+            recorder.setTargetVideoEncodingBitRate(videoOptions.bitrate.toInt())
         }
-        val recorder = recorderBuilder.build()
-        return VideoCapture.Builder<Recorder>(recorder)
+        val recorder = recorder.build()
+        return VideoCapture.Builder<MediaRecorder>(recorder)
             .setMirrorMode(if (mirrorFrontCamera) MirrorMode.MIRROR_MODE_ON_FRONT_ONLY else MirrorMode.MIRROR_MODE_OFF)
             .build()
     }
