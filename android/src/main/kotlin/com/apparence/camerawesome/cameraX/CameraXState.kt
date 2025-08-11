@@ -278,46 +278,25 @@ data class CameraXState(
             previewCamera!!.cameraControl.enableTorch(flashMode == FlashMode.ALWAYS)
         }
     }
-private fun getResolutionSelector(aspectRatio: Int): ResolutionSelector {
-    return ResolutionSelector.Builder()
-        .setAspectRatioStrategy(
-            AspectRatioStrategy(
-                aspectRatio,
-                AspectRatioStrategy.FALLBACK_RULE_AUTO
+
+    private fun getResolutionSelector(aspectRatio: Int): ResolutionSelector {
+        val resolutionStrategy = when (aspectRatio) {
+            AspectRatio.RATIO_16_9 -> ResolutionStrategy.HIGHEST_AVAILABLE_STRATEGY
+            AspectRatio.RATIO_4_3 -> ResolutionStrategy.HIGHEST_AVAILABLE_STRATEGY
+            else -> ResolutionStrategy.HIGHEST_AVAILABLE_STRATEGY
+        }
+
+        return ResolutionSelector.Builder()
+            .setAspectRatioStrategy(
+                when (aspectRatio) {
+                    AspectRatio.RATIO_16_9 -> AspectRatioStrategy.RATIO_16_9_FALLBACK_AUTO_STRATEGY
+                    AspectRatio.RATIO_4_3 -> AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY
+                    else -> AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY
+                }
             )
-        )
-        .build()
-}
-    // private fun buildVideoCapture(videoOptions: AndroidVideoOptions?): VideoCapture<Recorder> {
-    //     val recorderBuilder = Recorder.Builder()
-    //     // Aspect ratio is handled by the setViewPort on the UseCaseGroup
-    //     if (videoRecordingQuality != null) {
-    //         val quality = when (videoRecordingQuality) {
-    //             VideoRecordingQuality.LOWEST -> Quality.LOWEST
-    //             VideoRecordingQuality.SD -> Quality.SD
-    //             VideoRecordingQuality.HD -> Quality.HD
-    //             VideoRecordingQuality.FHD -> Quality.FHD
-    //             VideoRecordingQuality.UHD -> Quality.UHD
-    //             else -> Quality.HIGHEST
-    //         }
-    //         recorderBuilder.setQualitySelector(
-    //             QualitySelector.from(
-    //                 quality,
-    //                 if (videoOptions?.fallbackStrategy == QualityFallbackStrategy.LOWER) FallbackStrategy.lowerQualityOrHigherThan(
-    //                     quality
-    //                 )
-    //                 else FallbackStrategy.higherQualityOrLowerThan(quality)
-    //             )
-    //         )
-    //     }
-    //     if (videoOptions?.bitrate != null) {
-    //         recorderBuilder.setTargetVideoEncodingBitRate(videoOptions.bitrate.toInt())
-    //     }
-    //     val recorder = recorderBuilder.build()
-    //     return VideoCapture.Builder<Recorder>(recorder)
-    //         .setMirrorMode(if (mirrorFrontCamera) MirrorMode.MIRROR_MODE_ON_FRONT_ONLY else MirrorMode.MIRROR_MODE_OFF)
-    //         .build()
-    // }
+            .setResolutionStrategy(resolutionStrategy)
+            .build()
+    }
 
    private fun buildVideoCapture(videoOptions: AndroidVideoOptions?): VideoCapture<Recorder> {
     val qualitySelector = QualitySelector.from(
