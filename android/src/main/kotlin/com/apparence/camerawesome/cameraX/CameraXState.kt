@@ -1,5 +1,5 @@
 package com.apparence.camerawesome.cameraX
-
+import java.io.File
 import android.media.mediaRecorder
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -26,6 +26,12 @@ import com.apparence.camerawesome.utils.isMultiCamSupported
 import io.flutter.plugin.common.EventChannel
 import io.flutter.view.TextureRegistry
 import java.util.concurrent.Executor
+import androidx.camera.video.Recording
+import androidx.camera.video.VideoCapture
+import androidx.camera.video.Quality
+import androidx.camera.video.QualitySelector
+import androidx.camera.video.FallbackStrategy
+import androidx.camera.video.MirrorMode
 
 
 /// Hold the settings of the camera and use cases in this class and
@@ -272,7 +278,16 @@ data class CameraXState(
             previewCamera!!.cameraControl.enableTorch(flashMode == FlashMode.ALWAYS)
         }
     }
-
+private fun getResolutionSelector(aspectRatio: Int): ResolutionSelector {
+    return ResolutionSelector.Builder()
+        .setAspectRatioStrategy(
+            AspectRatioStrategy(
+                aspectRatio,
+                AspectRatioStrategy.FALLBACK_RULE_AUTO
+            )
+        )
+        .build()
+}
     // private fun buildVideoCapture(videoOptions: AndroidVideoOptions?): VideoCapture<Recorder> {
     //     val recorderBuilder = Recorder.Builder()
     //     // Aspect ratio is handled by the setViewPort on the UseCaseGroup
@@ -304,52 +319,32 @@ data class CameraXState(
     //         .build()
     // }
 
-    private fun buildVideoCapture(videoOptions: AndroidVideoOptions?): VideoCapture<MediaRecorder> {
-       // val recorderBuilder = Recorder.Builder()
+   private fun buildVideoCapture(videoOptions: AndroidVideoOptions?): VideoCapture<Recorder> {
+    val qualitySelector = QualitySelector.from(
+        when(videoRecordingQuality ?: VideoRecordingQuality.HIGHEST) {
+            VideoRecordingQuality.LOWEST -> Quality.LOWEST
+            VideoRecordingQuality.SD -> Quality.SD
+            VideoRecordingQuality.HD -> Quality.HD
+            VideoRecordingQuality.FHD -> Quality.FHD
+            VideoRecordingQuality.UHD -> Quality.UHD
+            else -> Quality.HIGHEST
+        },
+        FallbackStrategy.higherQualityOrLowerThan(Quality.HD)
+    )
 
-
-        val recorder = MediaRecorder()
-        recorder.setVideoSource(MediaRecorder.VideoSource.SURFACE)
-        recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-        // Custom encoding parameters
-        recorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264)
-        recorder.setVideoEncodingBitRate(3000000) // Bitrate
-        recorder.setVideoFrameRate(30) // Frame rate
-        recorder.setVideoSize(960, 720) // Resolution
-        recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-        recorder.setAudioEncodingBitRate(128000) // Audio bitrate
-        recorder.setAudioSamplingRate(44100)
-        recorder.setOutputFile(videoFile?.absolutePath)
-        recorder.prepare()
-
-        // Aspect ratio is handled by the setViewPort on the UseCaseGroup
-        if (videoRecordingQuality != null) {
-            val quality = when (videoRecordingQuality) {
-                VideoRecordingQuality.LOWEST -> Quality.LOWEST
-                VideoRecordingQuality.SD -> Quality.SD
-                VideoRecordingQuality.HD -> Quality.HD
-                VideoRecordingQuality.FHD -> Quality.FHD
-                VideoRecordingQuality.UHD -> Quality.UHD
-                else -> Quality.HIGHEST
-            }
-            recorder.setQualitySelector(
-                QualitySelector.from(
-                    quality,
-                    if (videoOptions?.fallbackStrategy == QualityFallbackStrategy.LOWER) FallbackStrategy.lowerQualityOrHigherThan(
-                        quality
-                    )
-                    else FallbackStrategy.higherQualityOrLowerThan(quality)
-                )
-            )
+    val recorder = Recorder.Builder()
+        .setQualitySelector(qualitySelector)
+        .apply {
+            videoOptions?.bitrate?.let { setTargetVideoEncodingBitRate(it.toInt()) }
         }
-        if (videoOptions?.bitrate != null) {
-            recorder.setTargetVideoEncodingBitRate(videoOptions.bitrate.toInt())
+        .build()
+
+    return VideoCapture.withOutput(recorder).apply {
+        if (mirrorFrontCamera) {
+            setMirrorMode(MirrorMode.MIRROR_MODE_ON_FRONT_ONLY)
         }
-        val recorder = recorder.build()
-        return VideoCapture.Builder<MediaRecorder>(recorder)
-            .setMirrorMode(if (mirrorFrontCamera) MirrorMode.MIRROR_MODE_ON_FRONT_ONLY else MirrorMode.MIRROR_MODE_OFF)
-            .build()
     }
+}
 
     @SuppressLint("RestrictedApi")
     private fun surfaceProvider(executor: Executor, cameraId: String): Preview.SurfaceProvider {
