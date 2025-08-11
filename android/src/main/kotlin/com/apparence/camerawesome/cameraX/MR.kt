@@ -12,6 +12,7 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import androidx.core.content.ContextCompat
 class CameraAwesomeX(
     private val context: Context,
     private val lifecycleOwner: LifecycleOwner

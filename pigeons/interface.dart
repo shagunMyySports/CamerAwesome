@@ -1,3 +1,6 @@
+
+
+import 'dart:typed_data';
 import 'package:pigeon/pigeon.dart';
 
 class PreviewSize {
